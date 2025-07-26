@@ -1,40 +1,41 @@
--- Script para atacar NPCs à distância em Vox Seas (exemplo educacional)
+-- Script de Kill Aura para Vox Seas (exemplo educacional)
+-- Use apenas para aprendizado! Risco de banimento.
 
 local player = game.Players.LocalPlayer
-local mouse = player:GetMouse()
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local attackRemote = ReplicatedStorage:FindFirstChild("RemoteEventNameAqui") -- Troque pelo nome real do RemoteEvent
+local killAuraAtivo = true -- Ativo por padrão
+local raio = 30 -- Distância máxima para atacar NPCs
 
--- Função para verificar se o player está com melee na mão
+-- Função para verificar se está com melee
 local function estaComMelee()
     local char = player.Character
     if not char then return false end
-    for _, obj in ipairs(char:GetChildren()) do
-        if obj:IsA("Tool") and obj.Name:lower():find("sword") then -- Troque por nome da melee se souber
-            return obj
+    for _, tool in ipairs(char:GetChildren()) do
+        if tool:IsA("Tool") and tool.Name:lower():find("sword") then -- Ajuste o nome se necessário
+            return tool
         end
     end
     return nil
 end
 
--- Função para atacar todos NPCs próximos
-local function atacarNPCs()
-    local melee = estaComMelee()
-    if not melee then
-        warn("Equipe uma melee primeiro!")
-        return
-    end
-    for _, npc in ipairs(workspace:GetChildren()) do
-        if npc:IsA("Model") and npc:FindFirstChild("Humanoid") and npc.Name ~= player.Name then
-            -- Envie ataque para o servidor como se estivesse perto do NPC
-            attackRemote:FireServer(npc) -- Parâmetros podem variar, adapte conforme o jogo
+-- Kill Aura Loop
+spawn(function()
+    while killAuraAtivo do
+        local melee = estaComMelee()
+        if melee then
+            for _, npc in ipairs(workspace:GetChildren()) do
+                if npc:IsA("Model") and npc:FindFirstChild("Humanoid") and npc.Name ~= player.Name then
+                    local root = npc:FindFirstChild("HumanoidRootPart") or npc.PrimaryPart
+                    if root and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                        local dist = (root.Position - player.Character.HumanoidRootPart.Position).Magnitude
+                        if dist <= raio then
+                            attackRemote:FireServer(npc) -- Parâmetro pode variar, verifique o correto
+                        end
+                    end
+                end
+            end
         end
-    end
-end
-
--- Ativa com a tecla Z
-mouse.KeyDown:Connect(function(key)
-    if key:lower() == "z" then
-        atacarNPCs()
+        wait(0.2) -- Ajuste a frequência do kill aura
     end
 end)
